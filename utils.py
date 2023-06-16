@@ -1,10 +1,9 @@
 import os
 import pickle
 import json
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 from torch.utils.data import DataLoader
 import pathlib
-from customdatasets import SegmentationDataSet
+from dataset import SegmentationDataSet
 from transformations import Compose, DenseTarget, RandomFlip, Resize_Sample
 from transformations import MoveAxis, Normalize01, RandomCrop, RandomCropVal_JEM, RandomCropTrain_JEM
 import segmentation_models_pytorch as smp
@@ -27,7 +26,7 @@ def makedirs(dirname):
         os.makedirs(dirname)
 
 
-def get_model(device, cl):
+def get_unet_model(device, cl):
     
     unet = smp.Unet('resnet152', classes=cl, activation=None, encoder_weights='imagenet')
 
@@ -37,184 +36,20 @@ def get_model(device, cl):
     unet = unet.to(device)
     return unet
 
-
-def import_data_jem(args, batch_sz):
-    
-    root = pathlib.Path('./')
-    '''
-    inputs = get_files('../../input_data/raw_john_handy/')
-    inputs_full = get_files('../../input_data/raw_john_cam/')
-    targets = get_files('../../input_data/mask_john_handy/')
-    targets_full = get_files('../../input_data/mask_john_cam/')
-    samples = get_files( '../../input_data/raw_john_handy/')
-    '''
-    inputs = get_files('./input_data/raw_john_handy/')
-    inputs_full = get_files('./input_data/raw_john_cam/')
-    targets = get_files('./input_data/mask_john_handy/')
-    targets_full = get_files('./input_data/mask_john_cam/')
-    samples = get_files( './input_data/raw_john_handy/')
-    
-    split = 0.8  
-
-    transforms_train = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCropTrain_JEM()
-        ])
-    transforms_valid = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCropVal_JEM()
-        ])
-    transforms_sample = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01()
-        ])
-
-    # train dataset
-    dataset_train = SegmentationDataSet(inputs=inputs,
-                                        targets=targets,
-                                        transform=transforms_train)
-
-
-    # validation dataset
-    dataset_valid = SegmentationDataSet(inputs=inputs_full,
-                                        targets=targets_full,
-                                        transform=transforms_valid)
-
-    #  sampling dataset
-    dataset_sample = SegmentationDataSet(inputs=inputs,
-                                        targets=targets,
-                                        transform=transforms_train)
-
-    batchsize = batch_sz
-
-
-    # train dataloader
-    dataloader_training = DataLoader(dataset=dataset_train,
-                                    batch_size=batchsize,
-                                    shuffle=True
-                                    )
-
-    # validation dataloader
-    dataloader_validation = DataLoader(dataset=dataset_valid,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-
-    dataloader_sample = DataLoader(dataset=dataset_sample,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-    
-    return dataloader_training, dataloader_validation, dataloader_sample
-
-def import_data_ood(args, batch_sz):
-    
-    root = pathlib.Path('./')
-    '''
-    inputs = get_files('../../input_data/raw_john_handy/')
-    inputs_full = get_files('../../input_data/raw_john_cam/')
-    targets = get_files('../../input_data/mask_john_handy/')
-    targets_full = get_files('../../input_data/mask_john_cam/')
-    samples = get_files( '../../input_data/raw_john_handy/')
-    '''
-    inputs = get_files('./input_data/raw_john_handy/')
-    inputs_full = get_files('./input_data/raw_john_cam/')
-    targets = get_files('./input_data/mask_john_handy/')
-    targets_full = get_files('./input_data/mask_john_cam/')
-    samples1 = get_files( './input_data/raw_usa/')
-    samples2 = get_files( './input_data/raw_grk_handy/')
-    samples3 = get_files( './input_data/raw_grk_cam/')
-    
-    split = 0.8  
-
-    transforms_train = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCropTrain_JEM()
-        ])
-    transforms_valid = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCropVal_JEM()
-        ])
-    transforms_sample = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        Resize_Sample()
-        ])
-
-    # train dataset
-    dataset_train = SegmentationDataSet(inputs=inputs,
-                                        targets=targets,
-                                        transform=transforms_train)
-
-
-    # validation dataset
-    dataset_valid = SegmentationDataSet(inputs=inputs_full,
-                                        targets=targets_full,
-                                        transform=transforms_valid)
-
-    #  sampling dataset
-    dataset_sample1 = SegmentationDataSet(inputs=samples1,
-                                        targets=targets,
-                                        transform=transforms_sample)
-
-    dataset_sample2 = SegmentationDataSet(inputs=samples2,
-                                        targets=targets,
-                                        transform=transforms_sample)
-
-    dataset_sample3 = SegmentationDataSet(inputs=samples3,
-                                        targets=targets,
-                                        transform=transforms_sample)
-
-    batchsize = batch_sz
-
-
-    # train dataloader
-    dataloader_training = DataLoader(dataset=dataset_train,
-                                    batch_size=batchsize,
-                                    shuffle=True
-                                    )
-
-    # validation dataloader
-    dataloader_validation = DataLoader(dataset=dataset_valid,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-
-    dataloader_sample1 = DataLoader(dataset=dataset_sample1,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-
-    dataloader_sample2 = DataLoader(dataset=dataset_sample2,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-    
-    dataloader_sample3 = DataLoader(dataset=dataset_sample3,
-                                    batch_size=batchsize,
-                                    shuffle=True)
-    
-    return dataloader_training, dataloader_validation, dataloader_sample1, dataloader_sample2, dataloader_sample3
-
-def import_data(args, batch_sz, set = 'usa'):
+def import_data(batch_sz, set = 'name_of_dataset'):
 
     root = pathlib.Path('./')
-    if set == 'usa':
-        inputs = get_files('./input_data/raw_usa/')
-        targets = get_files('./input_data/mask_usa/')
+    if set == 'set1':
+        inputs = get_files('./input_data/set1/')
+        targets = get_files('./input_data/set1/')
 
-    if set == 'john_handy':
-        inputs = get_files('./input_data/raw_john_handy/')
-        targets = get_files('./input_data/mask_john_handy/')
+    if set == 'set2':
+        inputs = get_files('./input_data/set2/')
+        targets = get_files('./input_data/set2/')
 
-    if set == 'john_cam':
-        inputs = get_files('./input_data/raw_john_cam/')
-        targets = get_files('./input_data/mask_john_cam/')
+    if set == 'set3':
+        inputs = get_files('./input_data/set3/')
+        targets = get_files('./input_data/set3/')
 
     split = 0.8  
 
@@ -231,22 +66,13 @@ def import_data(args, batch_sz, set = 'usa'):
         shuffle=True)
 
 
-    if set == 'usa':
-        transforms = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCrop(),
-        RandomFlip()
-        ])
-    else:
-        transforms = Compose([
-        DenseTarget(),
-        MoveAxis(),
-        Normalize01(),
-        RandomCropVal_JEM(),
-        RandomFlip()
-        ])
+    transforms = Compose([
+    DenseTarget(),
+    MoveAxis(),
+    Normalize01(),
+    RandomCropVal_JEM(),
+    RandomFlip()
+    ])
 
     # train dataset
     dataset_train = SegmentationDataSet(inputs=inputs_train,
@@ -290,14 +116,6 @@ def eval_classification(f, dload, device):
         correct = (logits.max(1)[1] == target).float().cpu().numpy()
         logits_max = logits.max(1)[1].float().cpu().numpy()
         label = target.float().cpu().numpy()
-        '''
-        fig, axs = plt.subplots(2)
-        axs[0].imshow(logits_max[0,:,:])
-        axs[1].imshow(label[0,:,:])
-        plt.show()
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        '''
 
         corrects.extend(correct)
     loss = np.mean(losses)
@@ -344,29 +162,13 @@ def logits2rgb(img):
             col[x, y, :] = colours[int(val)]
 
     return col.astype(int)
-'''
-def iou(outputs: t.Tensor, labels: t.Tensor):
-    # You can comment out this line if you are passing tensors of equal shape
-    # But if you are passing output from UNet or something it will most probably
-    # be with the BATCH x 1 x H x W shape
-    SMOOTH = 1e-6
-    #outputs = outputs.squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
-    
-    intersection = (outputs.astype(np.int32) & labels.astype(np.int32))#.sum((1, 2))  # Will be zero if Truth=0 or Prediction=0
-    union = (outputs.astype(np.int32) | labels.astype(np.int32)).sum((1, 2))         # Will be zero if both are 0
-    
-    iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
 
-    return iou
-'''
 
 def mIOU(pred, label, num_classes=8):
     
     iou_list = list()
     present_iou_list = list()
 
-    #pred = pred.view(-1)
-    #label = label.view(-1)
     # Note: Following for loop goes from 0 to (num_classes-1)
     # and ignore_index is num_classes, thus ignore_index is
     # not considered in computation of IoU.
