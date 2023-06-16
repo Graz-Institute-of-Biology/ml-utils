@@ -4,8 +4,8 @@ import json
 from torch.utils.data import DataLoader
 import pathlib
 from dataset import SegmentationDataSet
-from transformations import Compose, DenseTarget, RandomFlip, Resize_Sample
-from transformations import MoveAxis, Normalize01, RandomCrop, RandomCropVal_JEM, RandomCropTrain_JEM
+from transformations import Compose, RandomFlip
+from transformations import MoveAxis, Normalize01, RandomCrop
 import segmentation_models_pytorch as smp
 from sklearn.model_selection import train_test_split
 from os import walk
@@ -67,10 +67,9 @@ def import_data(batch_sz, set = 'name_of_dataset'):
 
 
     transforms = Compose([
-    DenseTarget(),
     MoveAxis(),
     Normalize01(),
-    RandomCropVal_JEM(),
+    RandomCrop(),
     RandomFlip()
     ])
 
