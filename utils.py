@@ -27,7 +27,6 @@ def makedirs(dirname):
 
 
 def get_unet_model(device, cl):
-    
     unet = smp.Unet('resnet152', classes=cl, activation=None, encoder_weights='imagenet')
 
     if t.cuda.is_available():
@@ -36,8 +35,7 @@ def get_unet_model(device, cl):
     unet = unet.to(device)
     return unet
 
-def import_data(batch_sz, set = 'name_of_dataset'):
-
+def import_data(batch_sz, set = 'name_of_dataset')
     root = pathlib.Path('./')
     if set == 'set1':
         inputs = get_files('./input_data/set1/')
@@ -104,12 +102,11 @@ def import_data(batch_sz, set = 'name_of_dataset'):
     return dataloader_training, dataloader_validation
 
 
-
-def eval_classification(f, dload, device):
+def eval_classification(model, dataloader, device):
     corrects, losses = [], []
-    for input, target in dload:
+    for input, target in dataloader:
         input, target = input.to(device), target.to(device)
-        logits = f(input)
+        logits = model(input)
         loss = nn.CrossEntropyLoss(reduce=False)(logits, target).cpu().numpy()
         losses.extend(loss)
         correct = (logits.max(1)[1] == target).float().cpu().numpy()
@@ -120,6 +117,34 @@ def eval_classification(f, dload, device):
     loss = np.mean(losses)
     correct = np.mean(corrects)
     return correct, loss
+    
+
+def eval_classification_classbased(model, dataloader, device, num_classes):
+    corrects, losses = [], []
+    class_corrects = np.zeros(num_classes)
+    class_totals = np.zeros(num_classes)
+    
+    for input, target in dataloader:
+        input, target = input.to(device), target.to(device)
+        logits = model(input)
+        loss = nn.CrossEntropyLoss(reduce=False)(logits, target).cpu().numpy()
+        losses.extend(loss)
+        correct = (logits.max(1)[1] == target).float().cpu().numpy()
+        
+        for i in range(num_classes):
+            class_idx = target == i
+            class_idx = class_idx.cpu().numpy()
+            class_corrects[i] += correct[class_idx].sum()
+            class_totals[i] += class_idx.sum()
+
+        corrects.extend(correct)
+
+    loss = np.mean(losses)
+    overall_correct = np.mean(corrects)
+    
+    class_accuracy = class_corrects / (class_totals + 1e-8)
+    
+    return overall_correct, loss, class_accuracy
 
 
 def checkpoint(f, tag, args, device, dload_train, dload_valid):
@@ -146,8 +171,6 @@ def logits2rgb(img):
 
     colours = [red, green, blue, yellow, black, white, cyan, orange]
 
-    
-    
     shape = np.shape(img)
     h = int(shape[0])
     w = int(shape[1])
@@ -164,7 +187,6 @@ def logits2rgb(img):
 
 
 def mIOU(pred, label, num_classes=8):
-    
     iou_list = list()
     present_iou_list = list()
 
